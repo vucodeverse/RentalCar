@@ -1,0 +1,270 @@
+:root {
+  --primary: #10b981;
+  --primary-dark: #059669;
+  --primary-light: #d1fae5;
+  --dark: #1f2937;
+  --gray: #6b7280;
+  --light-gray: #f3f4f6;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Inter", sans-serif;
+  color: var(--dark);
+  line-height: 1.6;
+}
+
+/* Car Cards - Modern Style from home.css */
+.car-card-modern {
+  border: none;
+  border-radius: 16px;
+  overflow: hidden;
+  transition: all 0.3s;
+  background: white;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  height: 100%;
+}
+
+.car-card-modern:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.car-card-clickable {
+  cursor: pointer;
+}
+
+.car-card-modern .card-img-top {
+  height: 220px;
+  object-fit: cover;
+  transition: all 0.3s;
+}
+
+.car-card-modern:hover .card-img-top {
+  transform: scale(1.05);
+}
+
+.car-card-modern .badge-modern {
+  background: var(--primary);
+  color: white;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.car-card-modern .price-modern {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.car-card-modern .price-old {
+  text-decoration: line-through;
+  color: var(--gray);
+  font-size: 1rem;
+}
+
+/* Special icon */
+.special-icon {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.5rem;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  z-index: 2;
+}
+
+/* Discount badge */
+.discount-badge {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  z-index: 2;
+}
+
+/* Section Titles */
+.section-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 3rem;
+  text-align: center;
+  position: relative;
+}
+
+.section-title::after {
+  content: "";
+  display: block;
+  width: 80px;
+  height: 4px;
+  background: var(--primary);
+  margin: 1rem auto 0;
+  border-radius: 2px;
+}
+
+/* Button styles */
+.btn-primary-custom {
+  background: var(--primary);
+  color: white;
+  padding: 0.5rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  border: none;
+  transition: all 0.3s;
+}
+
+.btn-primary-custom:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  color: white;
+}
+
+/* Legacy car-card class for backward compatibility */
+.car-card {
+  border: none;
+  border-radius: 16px;
+  overflow: hidden;
+  transition: all 0.3s;
+  background: white;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  height: 100%;
+}
+
+.car-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.car-image-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.car-image {
+  height: 220px;
+  object-fit: cover;
+  transition: all 0.3s;
+}
+
+.car-card:hover .car-image {
+  transform: scale(1.05);
+}
+
+.car-specs {
+  margin: 1rem 0;
+}
+
+.spec-item {
+  text-align: center;
+  padding: 0.5rem;
+}
+
+.spec-item i {
+  font-size: 1.2rem;
+  margin-bottom: 0.25rem;
+  display: block;
+}
+
+.location-info {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.price-section {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 1rem;
+}
+
+/* Price styling - must match home.css */
+.car-card-modern .price-modern,
+.price-modern {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--primary);
+  line-height: 1.2;
+}
+
+.car-card-modern .price-old,
+.price-old {
+  text-decoration: line-through;
+  color: var(--gray);
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+/* Brand logos */
+.brand-logo {
+  padding: 1rem;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.brand-logo:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.brand-logo img {
+  width: 60px;
+  height: 40px;
+  object-fit: contain;
+  margin-bottom: 0.5rem;
+}
+
+.brand-logo p {
+  margin: 0;
+  font-weight: 600;
+  color: #374151;
+}
+
+/* Location cards */
+.card-location {
+  border: none;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s;
+  height: 100%;
+}
+
+.card-location:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.card-location .card-img-top {
+  height: 150px;
+  object-fit: cover;
+}
+
+.card-location .card-body {
+  padding: 1.5rem;
+}
+
+.card-location .card-title {
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.card-location .btn-outline-success {
+  border-radius: 8px;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+}
+
+@media (max-width: 768px) {
+  .section-title {
+    font-size: 1.75rem;
+  }
+}
