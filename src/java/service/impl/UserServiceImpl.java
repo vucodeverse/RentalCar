@@ -1,0 +1,351 @@
+package service.impl;
+
+import dto.LocationDTO;
+import dto.UserDTO;
+import java.util.List;
+import java.util.Optional;
+import mapper.UserMapper;
+import model.User;
+import service.UserService;
+import util.PasswordUtil;
+import util.MessageUtil;
+import util.di.annotation.Autowired;
+import util.di.annotation.Service;
+import util.exception.ApplicationException;
+import util.exception.DataAccessException;
+import util.exception.ValidationException;
+import util.exception.BusinessException;
+import dao.UserDAO;
+import dao.LocationDAO;
+
+@Service
+public class UserServiceImpl implements UserService {
+
+    @Autowired
+    private UserDAO usersDAO;
+
+    @Autowired
+    private UserMapper userMapper;
+
+    @Autowired
+    private LocationDAO locationsDAO;
+
+    @Override
+    public Optional<UserDTO> loginUser(String username, String password) {
+        Optional<User> userOpt = usersDAO.getUserByUsername(username);
+        if (userOpt.isEmpty()) {
+            throw new ValidationException(MessageUtil.getError("error.login.invalid"));
+        }
+
+        User user = userOpt.get();
+
+        boolean valid = PasswordUtil.verifyPassword(
+                password,
+                user.getPasswordHash(),
+                user.getPasswordSalt()
+        );
+
+        if (!valid) {
+            throw new ValidationException(MessageUtil.getError("error.login.invalid"));
+        }
+
+        UserDTO dto = userMapper.toDTO(user);
+        return Optional.of(dto);
+    }
+
+    // Nếu bạn cần kiểm tra quyền admin
+    private boolean hasAdminRole(Integer userId) {
+        // bạn có thể viết thêm query ở UserDAO để kiểm tra role admin
+        // ví dụ SELECT COUNT(*) FROM UserRoles ur 
+        // JOIN Roles r ON ur.roleId = r.roleId 
+        // WHERE ur.userId = ? AND r.roleName = 'ADMIN'
+        return true; // tạm thời giả định là admin
+    }
+
+    @Override
+    public List<UserDTO> getAllUser() {
+        return usersDAO.getAllUsers()
+                .stream()
+                .map(userMapper::toDTO)
+                .toList();
+    }
+
+    @Override
+    public boolean changeUserPassword(Integer userId, String oldPassword, String newPassword) {
+        
+        
+        try {
+            // Không cho phép đặt mật khẩu mới giống mật khẩu cũ
+            if (oldPassword.equals(newPassword)) {
+                throw new ValidationException(MessageUtil
+                        .getError("error.password.change.failed"));
+            }
+
+            // Lấy thông tin user từ database
+            Optional<User> ou = usersDAO.getUserById(userId);
+            if (!ou.isPresent()) {
+                throw new ValidationException(MessageUtil
+                        .getError("error.validation.user.not.found"));
+            }
+
+            User user = ou.get();
+
+            // Xác thực mật khẩu cũ
+            if (!PasswordUtil.verifyPassword(oldPassword,
+                    user.getPasswordHash(), user.getPasswordSalt())) {
+                throw new ValidationException(MessageUtil
+                        .getError("error.password.change.failed"));
+            }
+
+            // Tạo salt mới và hash mật khẩu mới
+            byte[] newSalt = PasswordUtil.generateSalt(); // Tạo salt mới
+            byte[][] newHash = PasswordUtil.hashPassword(newPassword, newSalt); // Hash mật khẩu mới
+            byte[] newPasswordHash = newHash[0]; // Lấy hash
+            byte[] newPasswordSalt = newHash[1]; // Lấy salt
+
+            // Cập nhật mật khẩu mới trong database
+            boolean result = usersDAO.changePassword(user.getUserId(),
+                    newPasswordHash, newPasswordSalt);
+            if (!result) {
+                throw new BusinessException(MessageUtil
+                        .getError("error.password.change.failed"));
+            }
+            return true;
+
+        } catch (ApplicationException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new DataAccessException(MessageUtil
+                    .getError("error.password.change.failed"), e);
+        }
+    }
+
+    // ================== Add User ==================
+    @Override
+    public void addUser(UserDTO userDTO, String password) {
+        
+        String username = userDTO.getUsername();
+
+        if (username == null || username.trim().isEmpty()) {
+            throw new ValidationException("Username không hợp lệ");
+        }
+
+        if (!username.equals(username.trim())) {
+            throw new ValidationException("Username không được có khoảng trắng thừa");
+        }
+
+
+        try {
+            // Kiểm tra trùng username
+            if (usersDAO.getUserByUsername(userDTO.getUsername()).isPresent()) {
+                throw new ValidationException(MessageUtil.getError("error.username.exists"));
+            }
+            // Kiểm tra trùng email
+            if (usersDAO.existsEmail(userDTO.getEmail())) {
+                String emailError = MessageUtil.getError("error.email.exists")
+                        .replace("{0}", userDTO.getEmail());
+                throw new ValidationException(emailError);
+            }
+            // Kiểm tra trùng phone
+            if (usersDAO.existsPhone(userDTO.getPhone())) {
+                String phoneError = MessageUtil.getError("error.phone.exists")
+                        .replace("{0}", userDTO.getPhone());
+                throw new ValidationException(phoneError);
+            }
+
+            // Xử lý locationId
+            Integer locationId = userDTO.getLocationId();
+            if (locationId == null && userDTO.getCity() != null) {
+                locationId = locationsDAO.getOrCreateIdByCity(userDTO.getCity());
+            }
+
+            // Hash mật khẩu với salt ngẫu nhiên
+            byte[] salt = PasswordUtil.generateSalt();
+            byte[][] hashResult = PasswordUtil.hashPassword(password, salt);
+            byte[] passwordHash = hashResult[0];
+            byte[] passwordSalt = hashResult[1];
+
+            // Chuyển DTO -> Model
+            User user = userMapper.toModel(userDTO);
+            user.setPasswordHash(passwordHash);
+            user.setPasswordSalt(passwordSalt);
+            user.setLocationId(locationId);
+
+            boolean created = usersDAO.createUser(user);
+            if (!created) {
+                throw new BusinessException(MessageUtil
+                        .getError("error.dataaccess.user.add.failed"));
+            }
+
+        } catch (ApplicationException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new DataAccessException(MessageUtil
+                    .getError("error.dataaccess.user.add.error"), e);
+        }
+    }
+
+    // ================== Update User ==================
+    @Override
+    public void updateUser(UserDTO userDTO) {
+        try {
+            // Kiểm tra người dùng có tồn tại chưa
+            Optional<User> existingUser = usersDAO.getUserById(userDTO.getUserId());
+            if (existingUser.isEmpty()) {
+                throw new ValidationException(MessageUtil
+                        .getError("error.validation.user.not.found"));
+            }
+
+            // Kiểm tra email, phone (nếu có thay đổi)
+            User oldUser = existingUser.get();
+
+            // Kiểm tra trùng email nếu có thay đổi
+            if (!oldUser.getEmail().equals(userDTO.getEmail())
+                    && usersDAO.existsEmail(userDTO.getEmail())) {
+                String emailError = MessageUtil.getError("error.email.exists")
+                        .replace("{0}", userDTO.getEmail());
+                throw new ValidationException(emailError);
+            }
+            // Kiểm tra trùng phone nếu có thay đổi
+            if (!oldUser.getPhone().equals(userDTO.getPhone())
+                    && usersDAO.existsPhone(userDTO.getPhone())) {
+                String phoneError = MessageUtil.getError("error.phone.exists")
+                        .replace("{0}", userDTO.getPhone());
+                throw new ValidationException(phoneError);
+            }
+
+            // Resolve locationId
+            Integer locationId = userDTO.getLocationId();
+            if (locationId == null && userDTO.getCity() != null) {
+                locationId = locationsDAO.getOrCreateIdByCity(userDTO.getCity());
+            }
+
+            // Chuyển đổi sang model
+            User user = userMapper.toModel(userDTO);
+            user.setLocationId(locationId);
+
+            boolean success = usersDAO.updateUser(user);
+            if (!success) {
+                throw new BusinessException(MessageUtil
+                        .getError("error.dataaccess.user.update.failed"));
+            }
+
+        } catch (ApplicationException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new DataAccessException(MessageUtil
+                    .getError("error.dataaccess.user.update.error"), e);
+        }
+    }
+
+    // ================== Delete User ==================
+    @Override
+    public void deleteUser(Integer userId) {
+        try {
+            boolean success = usersDAO.deleteUser(userId);
+            if (!success) {
+                throw new BusinessException(MessageUtil
+                        .getError("error.dataaccess.user.delete.failed"));
+            }
+        } catch (ApplicationException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new DataAccessException(MessageUtil
+                    .getError("error.dataaccess.user.delete.error"), e);
+        }
+    }
+
+    // ================== Get All Location in Database ==================
+    @Override
+    public List<LocationDTO> getAllLocation() {
+        try {
+            // Lấy toàn bộ danh sách Location từ Database
+            var locations = locationsDAO.getAllLocations();
+
+            // Chuyển sang DTO
+            return locations.stream()
+                    .map(loc -> {
+                        LocationDTO dto = new LocationDTO();
+                        dto.setLocationId(loc.getLocationId());
+                        dto.setCity(loc.getCity());
+                        dto.setAddress(loc.getAddress());
+                        return dto;
+                    })
+                    .toList();
+
+        } catch (ApplicationException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new DataAccessException(MessageUtil.getError("error.system"), e);
+        }
+
+    }
+
+    // ================== Get 1 User By ID ==================
+    @Override
+    public UserDTO getUserById(Integer userId) {
+        try {
+            Optional<User> optionalUser = usersDAO.getUserById(userId);
+            if (optionalUser.isEmpty()) {
+                throw new ValidationException(MessageUtil
+                        .getError("error.validation.user.not.found"));
+            }
+
+            User user = optionalUser.get();
+            UserDTO dto = new UserDTO();
+
+            dto.setUserId(user.getUserId());
+            dto.setUsername(user.getUsername());
+            dto.setFullName(user.getFullName());
+            dto.setPhone(user.getPhone());
+            dto.setEmail(user.getEmail());
+            dto.setDateOfBirth(user.getDateOfBirth());
+            dto.setCreateAt(user.getCreateAt());
+            dto.setRoleId(user.getRoleId());
+            dto.setLocationId(user.getLocationId());
+
+            return dto;
+        } catch (ApplicationException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new DataAccessException(MessageUtil.getError("error.system"), e);
+        }
+    }
+
+    // ================== Search User by field ==================
+    @Override
+    public List<UserDTO> searchUsers(String keyword,
+            Integer roleId,
+            String fromDate,
+            String toDate,
+            int page,
+            int pageSize) {
+
+        int offset = (page - 1) * pageSize;
+
+        return usersDAO.searchUsers(
+                keyword,
+                roleId,
+                fromDate,
+                toDate,
+                offset,
+                pageSize
+        ).stream()
+                .map(userMapper::toDTO)
+                .toList();
+    }
+
+    @Override
+    public int countSearchUsers(String keyword,
+            Integer roleId,
+            String fromDate,
+            String toDate) {
+        return usersDAO.countSearchUsers(
+                keyword,
+                roleId,
+                fromDate,
+                toDate
+        );
+    }
+
+}

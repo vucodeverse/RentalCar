@@ -1,0 +1,43 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Interface.java to edit this template
+ */
+package service;
+
+import dto.*;
+import java.util.*;
+
+/**
+ *
+ * @author DELL
+ */
+public interface UserService {
+
+    Optional<UserDTO> loginUser(String username, String password);
+
+    List<UserDTO> getAllUser();
+    
+    List<LocationDTO> getAllLocation();
+    
+    UserDTO getUserById(Integer userId);
+
+    void addUser(UserDTO user, String password);
+
+    void updateUser(UserDTO user);
+
+    void deleteUser(Integer userId);
+    
+    public boolean changeUserPassword(Integer userId, String oldPassword, String newPassword);
+    
+    List<UserDTO> searchUsers(String keyword,
+            Integer roleId,
+            String fromDate,
+            String toDate,
+            int page,
+            int pageSize);
+    
+    public int countSearchUsers(String keyword,
+            Integer roleId,
+            String fromDate,
+            String toDate);
+}
